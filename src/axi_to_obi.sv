@@ -253,8 +253,8 @@ module axi_to_obi #(
         assign rsp_read_ruser_o [i] = rsp_ruser[         i][IdRuserWidth-1:ObiCfg.IdWidth];
         assign rsp_write_ruser_o[i] = rsp_ruser[NumBanks+i][IdRuserWidth-1:ObiCfg.IdWidth];
     end else begin
-        assign rsp_read_ruser_o [i] = 0;
-        assign rsp_write_ruser_o[i] = 0;
+        assign rsp_read_ruser_o [i] = '0;
+        assign rsp_write_ruser_o[i] = '0;
     end
   end
 
