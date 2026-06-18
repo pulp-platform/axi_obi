@@ -306,7 +306,7 @@ module obi_to_axi #(
   );
 
   localparam int unsigned NumObiChans = AxiDataWidth/ObiCfg.DataWidth;
-  localparam int unsigned NumObiChanWidth = $clog2(NumObiChans);
+  localparam int unsigned NumObiChanWidth = NumObiChans > 1 ? $clog2(NumObiChans) : 1;
 
   typedef logic[NumObiChanWidth-1:0] obi_chan_sel_t;
 
