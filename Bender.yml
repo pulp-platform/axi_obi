@@ -10,7 +10,7 @@ package:
 dependencies:
   axi:          { git: "https://github.com/pulp-platform/axi.git",          version: 0.39.8 }
   obi:          { git: "https://github.com/pulp-platform/obi.git",          version: 0.1.7  }
-  common_cells: { git: "https://github.com/pulp-platform/common_cells.git", rev: "v2-test"  }
+  common_cells: { git: "https://github.com/pulp-platform/common_cells.git", rev: "65881ba0300209f181ddd34a12a8a2e5df7c07c8" }
 
 sources:
   - src/axi_to_detailed_mem_user.sv
