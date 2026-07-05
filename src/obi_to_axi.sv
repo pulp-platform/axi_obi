@@ -270,13 +270,14 @@ module obi_to_axi #(
   logic [1:0] rsp_sel;
 
   cc_fifo #(
-    .FALL_THROUGH ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
-    .DEPTH        ( MaxRequests ),
-    .dtype        ( logic[1:0]  )
+    .FallThrough ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
+    .Depth       ( MaxRequests ),
+    .data_t      ( logic[1:0]  )
   ) i_fifo_rsp_mux (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0             ),
+    .clr_i      ( 1'b0             ),
     .full_o     ( fifo_full        ),
     .empty_o    ( fifo_empty       ),
     .usage_o    ( /*not used*/     ),
@@ -287,13 +288,14 @@ module obi_to_axi #(
   );
 
   cc_fifo #(
-    .FALL_THROUGH ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
-    .DEPTH        ( MaxRequests ),
-    .dtype        ( logic[ObiCfg.IdWidth-1:0] )
+    .FallThrough ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
+    .Depth       ( MaxRequests ),
+    .data_t      ( logic[ObiCfg.IdWidth-1:0] )
   ) i_fifo_rid (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0             ),
+    .clr_i      ( 1'b0             ),
     .full_o     (),// rsp_mux flow control used
     .empty_o    (),// rsp_mux flow control used
     .usage_o    (),// rsp_mux flow control used
@@ -311,13 +313,14 @@ module obi_to_axi #(
 
   if (AxiDataWidth > ObiCfg.DataWidth) begin : gen_datawidth_offset_fifo
     cc_fifo #(
-      .FALL_THROUGH ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
-      .DEPTH        ( MaxRequests ),
-      .dtype        ( obi_chan_sel_t  )
+      .FallThrough ( 1'b0        ), // No fallthrough for one cycle delay before ready on AXI.
+      .Depth       ( MaxRequests ),
+      .data_t      ( obi_chan_sel_t  )
     ) i_fifo_size (
       .clk_i,
       .rst_ni,
       .flush_i    ( 1'b0             ),
+      .clr_i      ( 1'b0             ),
       .full_o     (),// rsp_mux flow control used
       .empty_o    (),// rsp_mux flow control used
       .usage_o    (),// rsp_mux flow control used

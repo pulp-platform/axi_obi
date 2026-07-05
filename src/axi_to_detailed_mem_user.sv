@@ -359,13 +359,14 @@ module axi_to_detailed_mem_user #(
   assign sel_r = ~meta.write | meta.atop[5];
 
   cc_stream_fifo #(
-    .FALL_THROUGH ( 1'b1             ),
-    .DEPTH        ( 32'd1 + BufDepth ),
-    .T            ( logic[1:0]       )
+    .FallThrough ( 1'b1             ),
+    .Depth       ( 32'd1 + BufDepth ),
+    .data_t      ( logic[1:0]       )
   ) i_sel_buf (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0                    ),
+    .clr_i      ( 1'b0                    ),
     .data_i     ({sel_b,        sel_r    }),
     .valid_i    ( sel_valid               ),
     .ready_o    ( sel_ready               ),
@@ -376,13 +377,14 @@ module axi_to_detailed_mem_user #(
   );
 
   cc_stream_fifo #(
-    .FALL_THROUGH ( 1'b1             ),
-    .DEPTH        ( 32'd1 + BufDepth ),
-    .T            ( meta_t           )
+    .FallThrough ( 1'b1             ),
+    .Depth       ( 32'd1 + BufDepth ),
+    .data_t      ( meta_t           )
   ) i_meta_buf (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0           ),
+    .clr_i      ( 1'b0           ),
     .data_i     ( meta           ),
     .valid_i    ( meta_valid     ),
     .ready_o    ( meta_ready     ),
