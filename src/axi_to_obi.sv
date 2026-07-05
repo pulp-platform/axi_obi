@@ -125,7 +125,6 @@ module axi_to_obi #(
   ) i_read_write_demux (
     .clk_i,
     .rst_ni,
-    .test_i         ( testmode_i ),
     .slv_req_i      ( axi_req_i  ),
     .slv_resp_o     ( axi_rsp_o  ),
     .slv_ar_select_i( 1'b0       ),
