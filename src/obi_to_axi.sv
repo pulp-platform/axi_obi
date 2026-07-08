@@ -27,7 +27,10 @@ module obi_to_axi #(
   parameter type               axi_req_t = logic,
   /// The response struct of the AXI port
   parameter type               axi_rsp_t = logic,
-  parameter int unsigned       MaxRequests = 0
+  parameter int unsigned       MaxRequests = 0,
+  /// Enforce strict ordering between read and write channels. If disabled, ordering between reads
+  /// and writes is not guaranteed and AXI may complete them out of order.
+  parameter bit                StrictRWOrdering = 1'b1
 ) (
   input  logic     clk_i,
   input  logic     rst_ni,
@@ -49,9 +52,14 @@ module obi_to_axi #(
   localparam int unsigned AxiSize = axi_pkg::size_t'($unsigned($clog2(ObiCfg.DataWidth/8)));
   localparam bit [2:0] DefaultProt = 3'b100; // OBI default is 3'b111
 
+  localparam int unsigned ReqCntWidth = $clog2(MaxRequests+1);
+
   typedef logic [AxiAddrWidth-1:0] axi_addr_t;
 
   logic [$clog2(AxiDataWidth/ObiCfg.DataWidth)-1:0] data_offset, rdata_offset;
+
+  // Read/Write re-ordering stall.
+  logic rw_stall;
 
   // Response FIFO control signals.
   logic fifo_full, fifo_empty;
@@ -212,7 +220,7 @@ module obi_to_axi #(
     w_sent_d           = w_sent_q;
 
     // Control for Request to AXI4-Lite translation.
-    if (obi_req_i.req && !fifo_full) begin
+    if (obi_req_i.req && !fifo_full && !rw_stall) begin
       if (!obi_req_i.a.we) begin
         // It is a read request.
         axi_req_o.ar_valid = 1'b1;
@@ -265,6 +273,41 @@ module obi_to_axi #(
 
   `FFARN(aw_sent_q, aw_sent_d, 1'b0, clk_i, rst_ni)
   `FFARN(w_sent_q, w_sent_d, 1'b0, clk_i, rst_ni)
+
+  if (StrictRWOrdering) begin : gen_strict_rw_ordering
+    // AXI gives no ordering guarantee between the read and write channels, so reads issued after
+    // writes may overtake the writes and complete first at the end-point (and vice-versa).
+    // While the completion order is *not* a requirement of OBI (it is only required that the
+    // responses are sent in-order), it is a requirement of most memory consistency models.
+
+    // When strict R/W ordering must be enforced, reads and writes are never allowed to be
+    // outstanding on AXI at the same time.
+
+    logic [ReqCntWidth-1:0] rw_cnt_d, rw_cnt_q;
+    logic                   rw_cnt_write_d, rw_cnt_write_q;
+
+    always_comb begin : proc_rw_cnt
+      rw_cnt_write_d = rw_cnt_write_q;
+      rw_cnt_d       = rw_cnt_q;
+
+      if (obi_rsp_o.rvalid) begin
+        rw_cnt_d = rw_cnt_d - 1;
+      end
+
+      if (obi_req_i.req & obi_rsp_o.gnt) begin
+        rw_cnt_d       = rw_cnt_d + 1;
+        rw_cnt_write_d = obi_req_i.a.we;
+      end
+    end
+
+    `FFARN(rw_cnt_write_q, rw_cnt_write_d, '0, clk_i, rst_ni)
+    `FFARN(rw_cnt_q, rw_cnt_d, '0, clk_i, rst_ni)
+
+    assign rw_stall = (obi_req_i.a.we != rw_cnt_write_q) & (rw_cnt_q != 0);
+
+  end else begin : gen_no_rw_ordering
+    assign rw_stall = 1'b0;
+  end
 
   // Select which response should be forwarded. `01` write response, `00` read response, `11` for atomics.
   logic [1:0] rsp_sel;
@@ -376,6 +419,7 @@ module obi_to_axi #(
         assert (ObiCfg.OptionalCfg.UseMemtype == 0) else
           $fatal(1, "Memtype/cache not supported in AXI lite");
       end
+      assert (!ObiCfg.UseRReady) else $fatal(1, "RReady feature not supported!");
       assert (ObiCfg.AddrWidth > 32'd0) else $fatal(1, "OBI AddrWidth has to be greater than 0!");
       assert (AxiAddrWidth > 32'd0) else $fatal(1, "AxiAddrWidth has to be greater than 0!");
       assert (ObiCfg.DataWidth <= AxiDataWidth && AxiDataWidth % ObiCfg.DataWidth == 0) else
