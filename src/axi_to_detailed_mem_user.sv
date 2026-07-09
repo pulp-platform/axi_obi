@@ -358,15 +358,15 @@ module axi_to_detailed_mem_user #(
   assign sel_b = meta.write & meta.last;
   assign sel_r = ~meta.write | meta.atop[5];
 
-  stream_fifo #(
-    .FALL_THROUGH ( 1'b1             ),
-    .DEPTH        ( 32'd1 + BufDepth ),
-    .T            ( logic[1:0]       )
+  cc_stream_fifo #(
+    .FallThrough ( 1'b1             ),
+    .Depth       ( 32'd1 + BufDepth ),
+    .data_t      ( logic[1:0]       )
   ) i_sel_buf (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0                    ),
-    .testmode_i ( 1'b0                    ),
+    .clr_i      ( 1'b0                    ),
     .data_i     ({sel_b,        sel_r    }),
     .valid_i    ( sel_valid               ),
     .ready_o    ( sel_ready               ),
@@ -376,15 +376,15 @@ module axi_to_detailed_mem_user #(
     .usage_o    ( /* unused */            )
   );
 
-  stream_fifo #(
-    .FALL_THROUGH ( 1'b1             ),
-    .DEPTH        ( 32'd1 + BufDepth ),
-    .T            ( meta_t           )
+  cc_stream_fifo #(
+    .FallThrough ( 1'b1             ),
+    .Depth       ( 32'd1 + BufDepth ),
+    .data_t      ( meta_t           )
   ) i_meta_buf (
     .clk_i,
     .rst_ni,
     .flush_i    ( 1'b0           ),
-    .testmode_i ( 1'b0           ),
+    .clr_i      ( 1'b0           ),
     .data_i     ( meta           ),
     .valid_i    ( meta_valid     ),
     .ready_o    ( meta_ready     ),
@@ -614,14 +614,14 @@ module axi_to_detailed_mem_user #(
   assign ruser_rsp_extra_o       = m2s_resp.ruser;
 
   // Registers
-  `FFARN(meta_sel_q, meta_sel_d, 1'b0, clk_i, rst_ni)
-  `FFARN(sel_lock_q, sel_lock_d, 1'b0, clk_i, rst_ni)
-  `FFARN(rd_meta_q, rd_meta_d, meta_t'{default: '0}, clk_i, rst_ni)
-  `FFARN(wr_meta_q, wr_meta_d, meta_t'{default: '0}, clk_i, rst_ni)
-  `FFARN(r_cnt_q, r_cnt_d, '0, clk_i, rst_ni)
-  `FFARN(w_cnt_q, w_cnt_d, '0, clk_i, rst_ni)
-  `FFARN(collect_b_err_q, collect_b_err_d, '0, clk_i, rst_ni)
-  `FFARN(collect_b_exokay_q, collect_b_exokay_d, 1'b1, clk_i, rst_ni)
+  `FF(meta_sel_q, meta_sel_d, 1'b0, clk_i, rst_ni)
+  `FF(sel_lock_q, sel_lock_d, 1'b0, clk_i, rst_ni)
+  `FF(rd_meta_q, rd_meta_d, meta_t'{default: '0}, clk_i, rst_ni)
+  `FF(wr_meta_q, wr_meta_d, meta_t'{default: '0}, clk_i, rst_ni)
+  `FF(r_cnt_q, r_cnt_d, '0, clk_i, rst_ni)
+  `FF(w_cnt_q, w_cnt_d, '0, clk_i, rst_ni)
+  `FF(collect_b_err_q, collect_b_err_d, '0, clk_i, rst_ni)
+  `FF(collect_b_exokay_q, collect_b_exokay_d, 1'b1, clk_i, rst_ni)
 
   // Assertions
   // pragma translate_off

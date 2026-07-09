@@ -40,7 +40,6 @@ module axi_to_obi #(
 ) (
   input  logic     clk_i,
   input  logic     rst_ni,
-  input  logic     testmode_i,
 
   input  axi_req_t axi_req_i,
   output axi_rsp_t axi_rsp_o,
@@ -125,7 +124,6 @@ module axi_to_obi #(
   ) i_read_write_demux (
     .clk_i,
     .rst_ni,
-    .test_i         ( testmode_i ),
     .slv_req_i      ( axi_req_i  ),
     .slv_resp_o     ( axi_rsp_o  ),
     .slv_ar_select_i( 1'b0       ),
@@ -346,7 +344,6 @@ module axi_to_obi #(
   ) i_mux_banks (
     .clk_i,
     .rst_ni,
-    .testmode_i,
     .sbr_ports_req_i( obi_reqs  ),
     .sbr_ports_rsp_o( obi_rsps  ),
     .mgr_port_req_o ( obi_req_o ),
