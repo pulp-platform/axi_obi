@@ -81,8 +81,48 @@ module axi_to_obi #(
     logic [5:0]            atop;
   } tmp_atop_t;
 
-  axi_req_t axi_read_req, axi_write_req;
-  axi_rsp_t axi_read_rsp, axi_write_rsp;
+  axi_req_t axi_read_req, axi_write_req, axi_write_req_cvt;
+  axi_rsp_t axi_read_rsp, axi_write_rsp, axi_read_rsp_dmx, axi_write_rsp_dmx;
+
+  logic                              axi_write_r_valid_spill, axi_write_r_ready_spill;
+  logic [$bits(axi_write_rsp.r)-1:0] axi_write_r_spill;
+
+  // AR only reaches the read converter and AW/W only the write one: tie off the rest
+  always_comb begin : proc_tie_unused_channels
+    axi_read_rsp_dmx          = axi_read_rsp;
+    axi_read_rsp_dmx.aw_ready = 1'b0;
+    axi_read_rsp_dmx.w_ready  = 1'b0;
+    axi_read_rsp_dmx.b_valid  = 1'b0;
+    axi_write_rsp_dmx          = axi_write_rsp;
+    axi_write_rsp_dmx.ar_ready = 1'b0;
+    axi_write_rsp_dmx.r_valid  = axi_write_r_valid_spill;
+    axi_write_rsp_dmx.r        = axi_write_r_spill;
+    axi_write_req_cvt          = axi_write_req;
+    axi_write_req_cvt.r_ready  = axi_write_r_ready_spill;
+  end
+
+  // R are coming back from the write converter when supporting ATOPs.
+  if (ObiCfg.OptionalCfg.UseAtop) begin : gen_atop_r_cut
+    cc_spill_register #(
+      .data_t ( logic [$bits(axi_write_rsp.r)-1:0] ),
+      .Bypass ( 1'b0                               )
+    ) i_atop_r_cut (
+      .clk_i,
+      .rst_ni,
+      .clr_i   ( 1'b0                    ),
+      .valid_i ( axi_write_rsp.r_valid   ),
+      .ready_o ( axi_write_r_ready_spill ),
+      .data_i  ( axi_write_rsp.r         ),
+      .valid_o ( axi_write_r_valid_spill ),
+      .ready_i ( axi_write_req.r_ready   ),
+      .data_o  ( axi_write_r_spill       )
+    );
+  end else begin : gen_tie_write_r
+    // without ATOPs the write converter never returns R beats
+    assign axi_write_r_valid_spill = 1'b0;
+    assign axi_write_r_ready_spill = 1'b1;
+    assign axi_write_r_spill       = '0;
+  end
 
   localparam int unsigned IdRuserWidth = ObiCfg.IdWidth+ObiCfg.OptionalCfg.RUserWidth;
 
@@ -129,7 +169,7 @@ module axi_to_obi #(
     .slv_ar_select_i( 1'b0       ),
     .slv_aw_select_i( 1'b1       ),
     .mst_reqs_o     ( {axi_write_req, axi_read_req} ),
-    .mst_resps_i    ( {axi_write_rsp, axi_read_rsp} )
+    .mst_resps_i    ( {axi_write_rsp_dmx, axi_read_rsp_dmx} )
   );
 
   axi_to_detailed_mem_user #(
@@ -206,7 +246,7 @@ module axi_to_obi #(
 
     .busy_o      (),
 
-    .axi_req_i   ( axi_write_req ),
+    .axi_req_i   ( axi_write_req_cvt ),
     .axi_resp_o  ( axi_write_rsp ),
 
     .mem_req_o   ( bank_mem_req   [2*NumBanks-1:NumBanks] ),
@@ -349,5 +389,11 @@ module axi_to_obi #(
     .mgr_port_req_o ( obi_req_o ),
     .mgr_port_rsp_i ( obi_rsp_i )
   );
+
+`ifndef SYNTHESIS
+  assert property (@(posedge clk_i) disable iff (!rst_ni)
+      axi_req_i.aw_valid |-> ObiCfg.OptionalCfg.UseAtop || axi_req_i.aw.atop == '0)
+    else $error("ATOP received but ObiCfg.OptionalCfg.UseAtop is not set");
+`endif
 
 endmodule
