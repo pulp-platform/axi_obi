@@ -354,6 +354,13 @@ module axi_to_obi #(
       assign obi_reqs[i].a.a_optional.memtype[0] = bank_mem_cache[i][0];
       assign obi_reqs[i].a.a_optional.memtype[1] = ~bank_mem_cache[i][1];
     end
+    if (!ObiCfg.OptionalCfg.UseAtop &&
+        !ObiCfg.OptionalCfg.UseProt &&
+        !ObiCfg.OptionalCfg.UseMemtype &&
+        ObiCfg.OptionalCfg.AUserWidth == 0 &&
+        ObiCfg.OptionalCfg.WUserWidth == 0) begin : gen_obi_bank_tie_optional
+      assign obi_reqs[i].a.a_optional = '0;
+    end
     assign obi_reqs[i].a.aid = bank_mem_id[i];
     if (i < NumBanks) begin : gen_bank_auser
       if (ObiCfg.OptionalCfg.AUserWidth) begin : gen_auser
